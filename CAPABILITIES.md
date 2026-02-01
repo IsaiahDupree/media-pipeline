@@ -5,7 +5,7 @@ Video/media processing service using ffmpeg, ffprobe, and AI-powered analysis.
 
 **Port**: 6004  
 **Repository**: https://github.com/IsaiahDupree/media-pipeline  
-**Total Code**: 36,671 lines (moved from MediaPoster)
+**Total Code**: 71,826 lines (moved from MediaPoster)
 
 ## Real Implementations
 
