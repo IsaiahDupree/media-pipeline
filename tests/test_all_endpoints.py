@@ -154,6 +154,42 @@ class TestMattingEndpoint:
         assert response.status_code in [200, 500]
 
 
+class TestIndexTTS2Endpoint:
+    def test_indextts2_requires_text(self, client):
+        response = client.post("/api/tts/indextts2", json={})
+        assert response.status_code == 400
+    
+    def test_indextts2_with_text(self, client):
+        response = client.post("/api/tts/indextts2", json={
+            "text": "Hello world"
+        })
+        assert response.status_code in [200, 500]
+
+
+class TestRemotionRenderEndpoint:
+    def test_remotion_requires_brief(self, client):
+        response = client.post("/api/remotion/render", json={})
+        assert response.status_code == 400
+    
+    def test_remotion_with_brief(self, client):
+        response = client.post("/api/remotion/render", json={
+            "brief": {"title": "Test", "script": "Test script"}
+        })
+        assert response.status_code in [200, 500]
+
+
+class TestRemotionBriefEndpoint:
+    def test_brief_requires_script(self, client):
+        response = client.post("/api/remotion/brief", json={})
+        assert response.status_code == 400
+    
+    def test_brief_with_script(self, client):
+        response = client.post("/api/remotion/brief", json={
+            "script": "This is a test script for video generation"
+        })
+        assert response.status_code in [200, 500]
+
+
 @pytest.fixture
 def client():
     """Create test client."""
