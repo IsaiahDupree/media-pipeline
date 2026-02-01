@@ -11,18 +11,28 @@ from pathlib import Path
 
 app = Flask(__name__)
 
+# Add services to path
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 # Import real service implementations
 try:
     from services.detection.format_detector import FormatDetector
+    FORMAT_DETECTOR = FormatDetector()
     FORMAT_DETECTOR_AVAILABLE = True
-except ImportError:
+except Exception as e:
+    print(f"FormatDetector not available: {e}")
     FORMAT_DETECTOR_AVAILABLE = False
+    FORMAT_DETECTOR = None
 
 try:
     from services.extraction.duplicate_detector import DuplicateDetector
+    DUPLICATE_DETECTOR = DuplicateDetector()
     DUPLICATE_DETECTOR_AVAILABLE = True
-except ImportError:
+except Exception as e:
+    print(f"DuplicateDetector not available: {e}")
     DUPLICATE_DETECTOR_AVAILABLE = False
+    DUPLICATE_DETECTOR = None
 
 SERVICE_NAME = "media-pipeline"
 SERVICE_VERSION = "1.0.0"
@@ -158,23 +168,81 @@ def generate_thumbnails():
 
 @app.route("/api/format/detect", methods=["POST"])
 def detect_format():
-    """Detect media format."""
+    """Detect media format using real FormatDetector."""
     data = request.get_json()
     file_path = data.get("file_path")
+    transcript = data.get("transcript", "")
+    visual_analysis = data.get("visual_analysis", {})
     
     if not file_path:
         return jsonify({"error": "file_path required"}), 400
     
-    # TODO: Implement format detection
-    return jsonify({
-        "status": "success",
-        "file_path": file_path,
-        "format": {
-            "type": "video",
-            "codec": "unknown",
-            "container": "mp4"
-        }
-    })
+    if FORMAT_DETECTOR_AVAILABLE and FORMAT_DETECTOR:
+        try:
+            # Use real format detector
+            result = FORMAT_DETECTOR.detect_format(
+                transcript=transcript,
+                visual_analysis=visual_analysis,
+                duration_sec=data.get("duration")
+            )
+            return jsonify({
+                "status": "success",
+                "file_path": file_path,
+                "format": {
+                    "primary_format": result.primary_format.value,
+                    "confidence": round(result.confidence, 2),
+                    "has_speech": result.has_speech,
+                    "has_music": result.has_music,
+                    "has_people": result.has_people,
+                    "is_vertical": result.is_vertical,
+                    "production_quality": result.production_quality.value,
+                    "best_platforms": result.best_platforms,
+                    "reasons": result.reasons[:5]
+                },
+                "implementation": "real"
+            })
+        except Exception as e:
+            return jsonify({"status": "error", "error": str(e)}), 500
+    else:
+        # Fallback - use ffprobe for basic detection
+        try:
+            result = subprocess.run(
+                ["ffprobe", "-v", "quiet", "-print_format", "json",
+                 "-show_format", "-show_streams", file_path],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0:
+                probe = json.loads(result.stdout)
+                fmt = probe.get("format", {})
+                streams = probe.get("streams", [])
+                video_stream = next((s for s in streams if s.get("codec_type") == "video"), {})
+                
+                width = video_stream.get("width", 0)
+                height = video_stream.get("height", 0)
+                is_vertical = height > width if width and height else False
+                
+                return jsonify({
+                    "status": "success",
+                    "file_path": file_path,
+                    "format": {
+                        "primary_format": "unknown",
+                        "container": fmt.get("format_name", "unknown"),
+                        "codec": video_stream.get("codec_name", "unknown"),
+                        "is_vertical": is_vertical,
+                        "width": width,
+                        "height": height
+                    },
+                    "implementation": "ffprobe"
+                })
+        except Exception:
+            pass
+        
+        return jsonify({
+            "status": "success",
+            "file_path": file_path,
+            "format": {"type": "video", "codec": "unknown", "container": "mp4"},
+            "implementation": "placeholder"
+        })
 
 
 @app.route("/api/clip/extract", methods=["POST"])
@@ -200,20 +268,55 @@ def extract_clip():
 
 @app.route("/api/deduplicate/check", methods=["POST"])
 def check_duplicate():
-    """Check if content is a duplicate."""
+    """Check if content is a duplicate using real DuplicateDetector."""
     data = request.get_json()
     file_path = data.get("file_path")
+    content_hash = data.get("content_hash", "")
     
     if not file_path:
         return jsonify({"error": "file_path required"}), 400
     
-    # TODO: Implement deduplication check
-    return jsonify({
-        "status": "success",
-        "file_path": file_path,
-        "is_duplicate": False,
-        "similarity_score": 0.0
-    })
+    if DUPLICATE_DETECTOR_AVAILABLE and DUPLICATE_DETECTOR:
+        try:
+            # Use real duplicate detector
+            is_dup, similarity, match_id = DUPLICATE_DETECTOR.check_duplicate(
+                file_path=file_path,
+                content_hash=content_hash
+            )
+            return jsonify({
+                "status": "success",
+                "file_path": file_path,
+                "is_duplicate": is_dup,
+                "similarity_score": round(similarity, 2) if similarity else 0.0,
+                "matched_content_id": match_id,
+                "implementation": "real"
+            })
+        except Exception as e:
+            return jsonify({"status": "error", "error": str(e)}), 500
+    else:
+        # Fallback - compute file hash for basic dedup
+        try:
+            import hashlib
+            with open(file_path, 'rb') as f:
+                file_hash = hashlib.md5(f.read(8192)).hexdigest()
+            return jsonify({
+                "status": "success",
+                "file_path": file_path,
+                "is_duplicate": False,
+                "similarity_score": 0.0,
+                "file_hash": file_hash,
+                "implementation": "hash"
+            })
+        except Exception:
+            pass
+        
+        return jsonify({
+            "status": "success",
+            "file_path": file_path,
+            "is_duplicate": False,
+            "similarity_score": 0.0,
+            "implementation": "placeholder"
+        })
 
 
 if __name__ == "__main__":
