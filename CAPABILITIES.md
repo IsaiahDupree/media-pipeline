@@ -1,48 +1,129 @@
-# Media Pipeline Capabilities
+# Media Pipeline Service - Capabilities
 
-## Service Info
-- **Port:** 6004
-- **Health:** `GET /health`
+## Overview
+Video/media processing service using ffmpeg, ffprobe, and AI-powered analysis.
 
-## Endpoints
+**Port**: 6004  
+**Repository**: https://github.com/IsaiahDupree/media-pipeline
 
-### Video Analysis
-```http
-POST /api/analyze
-{ "video_path": "/path/to/video.mp4" }
+## Real Implementations
+
+| Endpoint | Implementation | Source |
+|----------|---------------|--------|
+| `/api/analyze` | ✅ **ffprobe** | Real video analysis |
+| `/api/thumbnail/generate` | ✅ **ffmpeg** | Real frame extraction |
+| `/api/format/detect` | ✅ **FormatDetector** | `services/detection/format_detector.py` |
+| `/api/deduplicate/check` | ✅ **DuplicateDetector** | `services/extraction/duplicate_detector.py` |
+
+## API Endpoints
+
+### Health Check
+```bash
+curl http://localhost:6004/health
 ```
 
-### Thumbnail Generation
-```http
-POST /api/thumbnail/generate
-{ "video_path": "/path/to/video.mp4", "count": 5 }
+### Video Analysis (Real ffprobe)
+```bash
+curl -X POST http://localhost:6004/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"video_path": "/path/to/video.mp4"}'
+```
+**Response:**
+```json
+{
+  "status": "success",
+  "analysis": {
+    "duration": 45.23,
+    "width": 1920,
+    "height": 1080,
+    "codec": "h264",
+    "fps": 30.0,
+    "bitrate": 5000000
+  }
+}
 ```
 
-### Format Detection
-```http
-POST /api/format/detect
-{ "file_path": "/path/to/media.mp4" }
+### Thumbnail Generation (Real ffmpeg)
+```bash
+curl -X POST http://localhost:6004/api/thumbnail/generate \
+  -H "Content-Type: application/json" \
+  -d '{"video_path": "/path/to/video.mp4", "count": 5, "output_dir": "/tmp/thumbs"}'
 ```
 
-### Clip Extraction
-```http
-POST /api/clip/extract
-{ "video_path": "/path/to/video.mp4", "start_time": 0, "end_time": 30 }
+### Format Detection (Real Implementation)
+```bash
+curl -X POST http://localhost:6004/api/format/detect \
+  -H "Content-Type: application/json" \
+  -d '{"file_path": "/path/to/video.mp4", "transcript": "Hello everyone, today I want to talk about..."}'
+```
+**Response:**
+```json
+{
+  "format": {
+    "primary_format": "talking_head",
+    "confidence": 0.85,
+    "has_speech": true,
+    "is_vertical": false,
+    "production_quality": "medium"
+  },
+  "implementation": "real"
+}
 ```
 
 ### Deduplication Check
-```http
-POST /api/deduplicate/check
-{ "file_path": "/path/to/video.mp4" }
+```bash
+curl -X POST http://localhost:6004/api/deduplicate/check \
+  -H "Content-Type: application/json" \
+  -d '{"file_path": "/path/to/video.mp4"}'
 ```
 
-## Capabilities Summary
+## Architecture
 
-| Capability | Status | Description |
-|------------|--------|-------------|
-| Video Analysis | ✅ Ready | Analyze video metadata, duration, format |
-| Thumbnail Generation | ✅ Ready | Extract frames, generate thumbnails |
-| Format Detection | ✅ Ready | Detect media format and codec |
-| Clip Extraction | ✅ Ready | Extract segments from video |
-| Deduplication | ✅ Ready | Content fingerprinting and matching |
-| Background Removal | 🔄 Planned | Matting and background removal |
+```
+media-pipeline/
+├── app.py                    # Flask application
+├── services/
+│   ├── detection/
+│   │   └── format_detector.py    # 15 content format types
+│   └── extraction/
+│       └── duplicate_detector.py # Content fingerprinting
+├── config/
+│   └── settings.py           # Environment configuration
+└── shared/
+    └── service_client.py     # Inter-service HTTP client
+```
+
+## Format Types Detected
+
+| Format | Description |
+|--------|-------------|
+| `talking_head` | Person speaking to camera |
+| `interview` | Two+ people in conversation |
+| `broll_scenic` | Landscape/environment footage |
+| `broll_action` | Movement/action footage |
+| `screen_recording` | Software demo, gameplay |
+| `tutorial_hands` | Hands-on tutorial |
+| `documentary` | Narrated voiceover |
+| `montage` | Quick cuts with music |
+| `meme_content` | Meme-style edits |
+
+## Dependencies
+```
+flask>=3.0.0
+httpx>=0.27.0
+python-dotenv>=1.0.0
+opencv-python>=4.9.0
+Pillow>=10.0.0
+numpy>=1.26.0
+loguru>=0.7.0
+```
+
+## System Requirements
+- **ffmpeg** - For video processing
+- **ffprobe** - For video analysis
+
+## Environment Variables
+```bash
+PORT=6004
+CONTENT_INTELLIGENCE_URL=http://localhost:6006
+```
