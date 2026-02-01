@@ -777,6 +777,131 @@ def remove_background():
         return jsonify({"status": "error", "error": str(e)}), 500
 
 
+@app.route("/api/tts/indextts2", methods=["POST"])
+def generate_indextts2():
+    """Generate TTS using IndexTTS2 from external TTS repo."""
+    data = request.get_json()
+    text = data.get("text")
+    voice_reference = data.get("voice_reference")
+    emotion = data.get("emotion", "neutral")
+    
+    if not text:
+        return jsonify({"error": "text required"}), 400
+    
+    try:
+        import subprocess
+        import tempfile
+        import os
+        
+        tts_repo = "/Users/isaiahdupree/Documents/Software/TTS"
+        output_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
+        
+        # Call the TTS repo's API script
+        cmd = [
+            "python3", "call_indextts2_api.py",
+            "--text", text,
+            "--output", output_file
+        ]
+        if voice_reference:
+            cmd.extend(["--voice", voice_reference])
+        
+        result = subprocess.run(
+            cmd,
+            cwd=tts_repo,
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+        
+        return jsonify({
+            "status": "success",
+            "output_path": output_file,
+            "text": text,
+            "emotion": emotion,
+            "implementation": "IndexTTS2 (external repo)"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/api/remotion/render", methods=["POST"])
+def render_remotion():
+    """Render video using Remotion from external repo."""
+    data = request.get_json()
+    brief = data.get("brief")
+    template = data.get("template", "BriefComposition")
+    
+    if not brief:
+        return jsonify({"error": "brief required"}), 400
+    
+    try:
+        import subprocess
+        import json
+        import tempfile
+        
+        remotion_repo = "/Users/isaiahdupree/Documents/Software/Remotion"
+        output_file = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
+        
+        # Write brief to temp file
+        brief_file = tempfile.NamedTemporaryFile(mode='w', suffix=".json", delete=False)
+        json.dump(brief, brief_file)
+        brief_file.close()
+        
+        # Call Remotion render
+        cmd = [
+            "npx", "remotion", "render", template,
+            output_file,
+            f"--props={json.dumps({'brief': brief})}"
+        ]
+        
+        result = subprocess.run(
+            cmd,
+            cwd=remotion_repo,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        
+        return jsonify({
+            "status": "success",
+            "output_path": output_file,
+            "template": template,
+            "implementation": "Remotion (external repo)"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/api/remotion/brief", methods=["POST"])
+def generate_remotion_brief():
+    """Generate a video brief for Remotion."""
+    data = request.get_json()
+    script = data.get("script")
+    title = data.get("title", "Untitled")
+    style = data.get("style", "default")
+    
+    if not script:
+        return jsonify({"error": "script required"}), 400
+    
+    try:
+        brief = {
+            "title": title,
+            "script": script,
+            "style": style,
+            "duration": len(script.split()) * 0.5,  # Rough estimate
+            "format": "9:16",
+            "generated_at": datetime.utcnow().isoformat()
+        }
+        
+        return jsonify({
+            "status": "success",
+            "brief": brief,
+            "implementation": "BriefGenerator"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
 if __name__ == "__main__":
     print(f"🚀 {SERVICE_NAME} starting on port {SERVICE_PORT}")
     app.run(host="0.0.0.0", port=SERVICE_PORT, debug=True)
