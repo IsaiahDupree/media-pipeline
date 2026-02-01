@@ -4,7 +4,8 @@
 Video/media processing service using ffmpeg, ffprobe, and AI-powered analysis.
 
 **Port**: 6004  
-**Repository**: https://github.com/IsaiahDupree/media-pipeline
+**Repository**: https://github.com/IsaiahDupree/media-pipeline  
+**Total Code**: 12,913 lines (moved from MediaPoster)
 
 ## Real Implementations
 
@@ -13,7 +14,42 @@ Video/media processing service using ffmpeg, ffprobe, and AI-powered analysis.
 | `/api/analyze` | ✅ **ffprobe** | Real video analysis |
 | `/api/thumbnail/generate` | ✅ **ffmpeg** | Real frame extraction |
 | `/api/format/detect` | ✅ **FormatDetector** | `services/detection/format_detector.py` |
-| `/api/deduplicate/check` | ✅ **DuplicateDetector** | `services/extraction/duplicate_detector.py` |
+| `/api/clip/extract` | ✅ **ffmpeg** | Real clip extraction |
+| `/api/deduplicate/check` | ✅ **DuplicateDetector** | `services/detection/duplicate_detector.py` |
+| `/api/transcribe` | ✅ **Whisper** | OpenAI Whisper API |
+
+## Services Copied from MediaPoster
+
+### Analysis Services (2,034 lines)
+| File | Lines | Purpose |
+|------|-------|---------|
+| `frame_analyzer.py` | 79 | Basic frame analysis |
+| `frame_analyzer_enhanced.py` | 474 | Advanced frame analysis |
+| `frame_sampler.py` | 265 | Smart frame sampling |
+| `video_analyzer.py` | 519 | Complete video analysis |
+| `batch_video_analyzer.py` | 408 | Batch processing |
+| `video_analysis.py` | 289 | Video analysis utilities |
+
+### Thumbnail Services (1,548 lines)
+| File | Lines | Purpose |
+|------|-------|---------|
+| `thumbnail_generator.py` | 589 | Platform-specific thumbnails |
+| `thumbnail_service.py` | 559 | Thumbnail orchestration |
+| `ai_thumbnail_selector.py` | 400 | AI-powered selection |
+
+### Detection Services (708 lines)
+| File | Lines | Purpose |
+|------|-------|---------|
+| `format_detector.py` | 566 | 15 content format types |
+| `broll_detector.py` | ~100 | B-roll detection |
+| `duplicate_detector.py` | ~100 | Content fingerprinting |
+
+### Transcription Services (1,124 lines)
+| File | Lines | Purpose |
+|------|-------|---------|
+| `transcription.py` | 236 | Whisper transcription |
+| `whisper_transcriber.py` | 195 | Whisper API wrapper |
+| `transcription_adapter.py` | 693 | Multi-provider adapter |
 
 ## API Endpoints
 
