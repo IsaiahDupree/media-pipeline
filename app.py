@@ -426,6 +426,101 @@ def transcribe_video():
         return jsonify({"status": "error", "error": str(e)}), 500
 
 
+@app.route("/api/audio/analyze", methods=["POST"])
+def analyze_audio():
+    """Analyze audio in video file using ffprobe."""
+    data = request.get_json()
+    video_path = data.get("video_path")
+    
+    if not video_path:
+        return jsonify({"error": "video_path required"}), 400
+    
+    if not os.path.exists(video_path):
+        return jsonify({"error": "video file not found"}), 404
+    
+    try:
+        # Use ffprobe for audio analysis
+        cmd = [
+            "ffprobe",
+            "-v", "quiet",
+            "-print_format", "json",
+            "-show_streams",
+            "-select_streams", "a",
+            video_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        
+        if result.returncode != 0:
+            return jsonify({
+                "status": "error",
+                "error": "ffprobe failed",
+                "details": result.stderr
+            }), 500
+        
+        probe_data = json.loads(result.stdout)
+        audio_streams = probe_data.get("streams", [])
+        
+        if not audio_streams:
+            return jsonify({
+                "status": "success",
+                "video_path": video_path,
+                "has_audio": False,
+                "audio_streams": [],
+                "implementation": "ffprobe"
+            })
+        
+        # Get audio info from first stream
+        audio = audio_streams[0]
+        
+        # Try to get loudness with ffmpeg
+        loudness_cmd = [
+            "ffmpeg",
+            "-i", video_path,
+            "-af", "volumedetect",
+            "-f", "null",
+            "-"
+        ]
+        loudness_result = subprocess.run(loudness_cmd, capture_output=True, text=True, timeout=60)
+        
+        # Parse loudness info
+        mean_volume = None
+        max_volume = None
+        for line in loudness_result.stderr.split('\n'):
+            if 'mean_volume' in line:
+                try:
+                    mean_volume = float(line.split('mean_volume:')[1].split('dB')[0].strip())
+                except:
+                    pass
+            if 'max_volume' in line:
+                try:
+                    max_volume = float(line.split('max_volume:')[1].split('dB')[0].strip())
+                except:
+                    pass
+        
+        return jsonify({
+            "status": "success",
+            "video_path": video_path,
+            "has_audio": True,
+            "audio_info": {
+                "codec": audio.get("codec_name"),
+                "channels": audio.get("channels"),
+                "sample_rate": audio.get("sample_rate"),
+                "bit_rate": audio.get("bit_rate"),
+                "duration": audio.get("duration")
+            },
+            "loudness": {
+                "mean_volume_db": mean_volume,
+                "max_volume_db": max_volume
+            },
+            "audio_streams": len(audio_streams),
+            "implementation": "ffprobe"
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({"status": "error", "error": "Analysis timed out"}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
 if __name__ == "__main__":
     print(f"🚀 {SERVICE_NAME} starting on port {SERVICE_PORT}")
     app.run(host="0.0.0.0", port=SERVICE_PORT, debug=True)
