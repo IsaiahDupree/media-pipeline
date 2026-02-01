@@ -26,6 +26,9 @@ Video/media processing service using ffmpeg, ffprobe, and AI-powered analysis.
 | `/api/scrape/instagram` | ✅ **InstagramScraper** | `services/scrapers/instagram_scraper.py` |
 | `/api/workers/status` | ✅ **WorkerStatus** | Worker availability check |
 | `/api/matting/remove-bg` | ✅ **MattingWorker** | `services/matting/worker.py` |
+| `/api/tts/indextts2` | ✅ **IndexTTS2** | External: `/TTS/call_indextts2_api.py` |
+| `/api/remotion/render` | ✅ **Remotion** | External: `/Remotion/` subprocess |
+| `/api/remotion/brief` | ✅ **BriefGenerator** | Video brief generation |
 
 ## Services Copied from MediaPoster
 
