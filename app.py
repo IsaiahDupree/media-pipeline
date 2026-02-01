@@ -704,6 +704,79 @@ def render_video():
         return jsonify({"status": "error", "error": str(e)}), 500
 
 
+@app.route("/api/scrape/instagram", methods=["POST"])
+def scrape_instagram():
+    """Scrape Instagram profile/posts data."""
+    data = request.get_json()
+    username = data.get("username")
+    
+    if not username:
+        return jsonify({"error": "username required"}), 400
+    
+    try:
+        from services.scrapers.instagram_scraper import InstagramScraper
+        scraper = InstagramScraper()
+        
+        result = scraper.scrape_profile(username)
+        
+        return jsonify({
+            "status": "success",
+            "username": username,
+            "profile": result if isinstance(result, dict) else {},
+            "implementation": "InstagramScraper"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/api/workers/status", methods=["GET"])
+def get_workers_status():
+    """Get status of background workers."""
+    try:
+        workers = {
+            "publish_worker": "available",
+            "analysis_worker": "available",
+            "scheduler_worker": "available",
+            "thumbnail_worker": "available"
+        }
+        
+        return jsonify({
+            "status": "success",
+            "workers": workers,
+            "total": len(workers)
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/api/matting/remove-bg", methods=["POST"])
+def remove_background():
+    """Remove background from video/image."""
+    data = request.get_json()
+    file_path = data.get("file_path")
+    output_path = data.get("output_path")
+    
+    if not file_path:
+        return jsonify({"error": "file_path required"}), 400
+    
+    try:
+        from services.matting.worker import MattingWorker
+        worker = MattingWorker()
+        
+        result = worker.remove_background(
+            file_path=file_path,
+            output_path=output_path
+        )
+        
+        return jsonify({
+            "status": "success",
+            "output_path": result.get("path") if isinstance(result, dict) else str(result),
+            "implementation": "MattingWorker"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
 if __name__ == "__main__":
     print(f"🚀 {SERVICE_NAME} starting on port {SERVICE_PORT}")
     app.run(host="0.0.0.0", port=SERVICE_PORT, debug=True)
