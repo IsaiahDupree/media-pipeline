@@ -367,6 +367,65 @@ def check_duplicate():
         })
 
 
+@app.route("/api/transcribe", methods=["POST"])
+def transcribe_video():
+    """Transcribe video/audio using OpenAI Whisper API."""
+    data = request.get_json()
+    video_path = data.get("video_path")
+    language = data.get("language")
+    
+    if not video_path:
+        return jsonify({"error": "video_path required"}), 400
+    
+    if not os.path.exists(video_path):
+        return jsonify({"error": "video file not found"}), 404
+    
+    # Try to use real transcription service
+    try:
+        from openai import OpenAI
+        api_key = os.getenv("OPENAI_API_KEY", "")
+        
+        if api_key:
+            client = OpenAI(api_key=api_key)
+            
+            with open(video_path, "rb") as audio_file:
+                response = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                    language=language,
+                    response_format="verbose_json",
+                    timestamp_granularities=["word", "segment"]
+                )
+            
+            return jsonify({
+                "status": "success",
+                "video_path": video_path,
+                "text": response.text,
+                "language": response.language,
+                "duration": response.duration,
+                "words": [{"word": w.word, "start": w.start, "end": w.end} for w in (response.words or [])],
+                "segments": [{"text": s.text, "start": s.start, "end": s.end} for s in (response.segments or [])],
+                "implementation": "whisper"
+            })
+        else:
+            return jsonify({
+                "status": "success",
+                "video_path": video_path,
+                "text": "",
+                "words": [],
+                "segments": [],
+                "implementation": "placeholder",
+                "note": "Set OPENAI_API_KEY for real transcription"
+            })
+    except ImportError:
+        return jsonify({
+            "status": "error",
+            "error": "openai package not installed"
+        }), 500
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
 if __name__ == "__main__":
     print(f"🚀 {SERVICE_NAME} starting on port {SERVICE_PORT}")
     app.run(host="0.0.0.0", port=SERVICE_PORT, debug=True)
