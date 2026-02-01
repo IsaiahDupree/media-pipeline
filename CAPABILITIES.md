@@ -23,6 +23,9 @@ Video/media processing service using ffmpeg, ffprobe, and AI-powered analysis.
 | `/api/music/search` | ✅ **MusicWorker** | `services/music/worker.py` |
 | `/api/sfx/search` | ✅ **SFXService** | `services/sfx_library/sfx_service.py` |
 | `/api/render/video` | ✅ **VideoRenderer** | `services/video_renderer/renderer.py` |
+| `/api/scrape/instagram` | ✅ **InstagramScraper** | `services/scrapers/instagram_scraper.py` |
+| `/api/workers/status` | ✅ **WorkerStatus** | Worker availability check |
+| `/api/matting/remove-bg` | ✅ **MattingWorker** | `services/matting/worker.py` |
 
 ## Services Copied from MediaPoster
 
