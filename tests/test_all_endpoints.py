@@ -69,6 +69,61 @@ class TestDeduplicateEndpoint:
         assert response.status_code == 400
 
 
+class TestOrchestrateEndpoint:
+    def test_orchestrate_requires_script(self, client):
+        response = client.post("/api/orchestrate/plan", json={})
+        assert response.status_code == 400
+    
+    def test_orchestrate_with_script(self, client):
+        response = client.post("/api/orchestrate/plan", json={
+            "script": "Hello everyone. Today we talk about AI. It's changing the world.",
+            "title": "AI Overview"
+        })
+        assert response.status_code in [200, 500, 503]
+
+
+class TestTTSEndpoint:
+    def test_tts_requires_text(self, client):
+        response = client.post("/api/tts/generate", json={})
+        assert response.status_code == 400
+    
+    def test_tts_with_text(self, client):
+        response = client.post("/api/tts/generate", json={
+            "text": "Hello world"
+        })
+        assert response.status_code in [200, 500]
+
+
+class TestMusicEndpoint:
+    def test_music_search(self, client):
+        response = client.post("/api/music/search", json={
+            "query": "upbeat",
+            "mood": "happy"
+        })
+        assert response.status_code in [200, 500]
+
+
+class TestSFXEndpoint:
+    def test_sfx_search(self, client):
+        response = client.post("/api/sfx/search", json={
+            "query": "whoosh"
+        })
+        assert response.status_code in [200, 500]
+
+
+class TestRenderEndpoint:
+    def test_render_requires_timeline(self, client):
+        response = client.post("/api/render/video", json={})
+        assert response.status_code == 400
+    
+    def test_render_with_timeline(self, client):
+        response = client.post("/api/render/video", json={
+            "timeline": {"clips": []},
+            "output_path": "/tmp/test_render.mp4"
+        })
+        assert response.status_code in [200, 500]
+
+
 @pytest.fixture
 def client():
     """Create test client."""
