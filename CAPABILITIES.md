@@ -17,6 +17,12 @@ Video/media processing service using ffmpeg, ffprobe, and AI-powered analysis.
 | `/api/clip/extract` | ✅ **ffmpeg** | Real clip extraction |
 | `/api/deduplicate/check` | ✅ **DuplicateDetector** | `services/detection/duplicate_detector.py` |
 | `/api/transcribe` | ✅ **Whisper** | OpenAI Whisper API |
+| `/api/audio/analyze` | ✅ **ffprobe** | Audio stream analysis |
+| `/api/orchestrate/plan` | ✅ **DirectorService** | `services/video_orchestrator/director.py` |
+| `/api/tts/generate` | ✅ **TTSWorker** | `services/tts/worker.py` |
+| `/api/music/search` | ✅ **MusicWorker** | `services/music/worker.py` |
+| `/api/sfx/search` | ✅ **SFXService** | `services/sfx_library/sfx_service.py` |
+| `/api/render/video` | ✅ **VideoRenderer** | `services/video_renderer/renderer.py` |
 
 ## Services Copied from MediaPoster
 
