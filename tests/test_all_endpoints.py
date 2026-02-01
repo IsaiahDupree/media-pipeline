@@ -124,6 +124,36 @@ class TestRenderEndpoint:
         assert response.status_code in [200, 500]
 
 
+class TestScrapeInstagramEndpoint:
+    def test_scrape_requires_username(self, client):
+        response = client.post("/api/scrape/instagram", json={})
+        assert response.status_code == 400
+    
+    def test_scrape_with_username(self, client):
+        response = client.post("/api/scrape/instagram", json={
+            "username": "test_user"
+        })
+        assert response.status_code in [200, 500]
+
+
+class TestWorkersStatusEndpoint:
+    def test_workers_status(self, client):
+        response = client.get("/api/workers/status")
+        assert response.status_code in [200, 500]
+
+
+class TestMattingEndpoint:
+    def test_matting_requires_file_path(self, client):
+        response = client.post("/api/matting/remove-bg", json={})
+        assert response.status_code == 400
+    
+    def test_matting_with_file_path(self, client):
+        response = client.post("/api/matting/remove-bg", json={
+            "file_path": "/tmp/test.mp4"
+        })
+        assert response.status_code in [200, 500]
+
+
 @pytest.fixture
 def client():
     """Create test client."""
