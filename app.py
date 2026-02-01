@@ -247,23 +247,71 @@ def detect_format():
 
 @app.route("/api/clip/extract", methods=["POST"])
 def extract_clip():
-    """Extract a clip from video."""
+    """Extract a clip from video using ffmpeg."""
     data = request.get_json()
     video_path = data.get("video_path")
     start_time = data.get("start_time", 0)
     end_time = data.get("end_time")
+    output_path = data.get("output_path")
     
     if not video_path:
         return jsonify({"error": "video_path required"}), 400
     
-    # TODO: Implement clip extraction
-    return jsonify({
-        "status": "success",
-        "video_path": video_path,
-        "clip_path": None,
-        "start_time": start_time,
-        "end_time": end_time
-    })
+    if not os.path.exists(video_path):
+        return jsonify({"error": "video file not found"}), 404
+    
+    if end_time is None:
+        return jsonify({"error": "end_time required"}), 400
+    
+    # Generate output path if not provided
+    if not output_path:
+        video_dir = os.path.dirname(video_path)
+        video_name = os.path.splitext(os.path.basename(video_path))[0]
+        output_path = os.path.join(video_dir, f"{video_name}_clip_{start_time}_{end_time}.mp4")
+    
+    try:
+        # Calculate duration
+        duration = float(end_time) - float(start_time)
+        
+        # Use ffmpeg to extract clip
+        cmd = [
+            "ffmpeg", "-y",
+            "-ss", str(start_time),
+            "-i", video_path,
+            "-t", str(duration),
+            "-c:v", "libx264",
+            "-c:a", "aac",
+            "-preset", "fast",
+            output_path
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        
+        if result.returncode != 0:
+            return jsonify({
+                "status": "error",
+                "error": f"ffmpeg failed: {result.stderr[:500]}"
+            }), 500
+        
+        # Get clip info
+        clip_size = os.path.getsize(output_path) if os.path.exists(output_path) else 0
+        
+        return jsonify({
+            "status": "success",
+            "video_path": video_path,
+            "clip_path": output_path,
+            "start_time": start_time,
+            "end_time": end_time,
+            "duration": duration,
+            "size_bytes": clip_size,
+            "implementation": "ffmpeg"
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({"status": "error", "error": "ffmpeg timeout"}), 500
+    except FileNotFoundError:
+        return jsonify({"status": "error", "error": "ffmpeg not installed"}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
 
 
 @app.route("/api/deduplicate/check", methods=["POST"])
