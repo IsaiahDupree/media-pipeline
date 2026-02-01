@@ -5,7 +5,7 @@ Video/media processing service using ffmpeg, ffprobe, and AI-powered analysis.
 
 **Port**: 6004  
 **Repository**: https://github.com/IsaiahDupree/media-pipeline  
-**Total Code**: 12,913 lines (moved from MediaPoster)
+**Total Code**: 36,671 lines (moved from MediaPoster)
 
 ## Real Implementations
 
@@ -50,6 +50,32 @@ Video/media processing service using ffmpeg, ffprobe, and AI-powered analysis.
 | `transcription.py` | 236 | Whisper transcription |
 | `whisper_transcriber.py` | 195 | Whisper API wrapper |
 | `transcription_adapter.py` | 693 | Multi-provider adapter |
+
+### SFX Library (3,732 lines)
+| File | Purpose |
+|------|---------|
+| `audio_mixer.py` | Audio mixing |
+| `beat_extractor.py` | Beat detection |
+| `cue_sheet.py` | Cue sheet generation |
+| `llm_integration.py` | AI sound selection |
+| `macros.py` | Audio macros |
+
+### Video Generation (14,514 lines)
+| File | Purpose |
+|------|---------|
+| `full_pipeline.py` | Complete video pipeline |
+| `orchestrator.py` | Pipeline orchestration |
+| `shot_plan.py` | Shot planning |
+| `remotion_video_pipeline.py` | Remotion integration |
+| `voice_engine.py` | Voice generation |
+| `gemini_video_pipeline.py` | Gemini video |
+
+### Repurpose Services
+| File | Purpose |
+|------|---------|
+| `clip_extractor.py` | Clip extraction |
+| `pipeline.py` | Repurpose pipeline |
+| `video_analyzer.py` | Video analysis |
 
 ## API Endpoints
 
