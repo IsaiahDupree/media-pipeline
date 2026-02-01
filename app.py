@@ -521,6 +521,189 @@ def analyze_audio():
         return jsonify({"status": "error", "error": str(e)}), 500
 
 
+# Import video orchestrator
+try:
+    from services.video_orchestrator.director import DirectorService, DirectorConfig
+    DIRECTOR_SERVICE = DirectorService(DirectorConfig())
+    DIRECTOR_AVAILABLE = True
+except Exception as e:
+    print(f"DirectorService not available: {e}")
+    DIRECTOR_AVAILABLE = False
+    DIRECTOR_SERVICE = None
+
+# Import video renderer
+try:
+    from services.video_renderer.renderer import VideoRenderer
+    VIDEO_RENDERER_AVAILABLE = True
+except Exception as e:
+    print(f"VideoRenderer not available: {e}")
+    VIDEO_RENDERER_AVAILABLE = False
+
+
+@app.route("/api/orchestrate/plan", methods=["POST"])
+def create_clip_plan():
+    """Create a clip plan from a script using DirectorService."""
+    if not DIRECTOR_AVAILABLE:
+        return jsonify({"error": "DirectorService not available"}), 503
+    
+    data = request.get_json()
+    script_text = data.get("script")
+    title = data.get("title", "Untitled")
+    
+    if not script_text:
+        return jsonify({"error": "script required"}), 400
+    
+    try:
+        # Create clip plan from script
+        from services.video_orchestrator.models import PlanConstraints, PacingConstraints
+        
+        constraints = PlanConstraints(
+            target_duration=data.get("target_duration", 60),
+            pacing=PacingConstraints(
+                words_per_minute=data.get("wpm", 150),
+                min_clip_seconds=data.get("min_clip", 4),
+                max_clip_seconds=data.get("max_clip", 12)
+            )
+        )
+        
+        clip_plan = DIRECTOR_SERVICE.create_clip_plan(
+            script_text=script_text,
+            title=title,
+            constraints=constraints
+        )
+        
+        return jsonify({
+            "status": "success",
+            "clip_plan": {
+                "id": str(clip_plan.id) if hasattr(clip_plan, 'id') else "generated",
+                "title": title,
+                "clip_count": len(clip_plan.clips) if hasattr(clip_plan, 'clips') else 0,
+                "total_duration": sum(c.duration for c in clip_plan.clips) if hasattr(clip_plan, 'clips') else 0
+            },
+            "implementation": "DirectorService"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/api/tts/generate", methods=["POST"])
+def generate_tts():
+    """Generate text-to-speech audio."""
+    data = request.get_json()
+    text = data.get("text")
+    voice = data.get("voice", "default")
+    output_path = data.get("output_path")
+    
+    if not text:
+        return jsonify({"error": "text required"}), 400
+    
+    try:
+        from services.tts.worker import TTSWorker
+        worker = TTSWorker()
+        
+        result = worker.generate(
+            text=text,
+            voice=voice,
+            output_path=output_path
+        )
+        
+        return jsonify({
+            "status": "success",
+            "audio_path": result.get("path") if isinstance(result, dict) else str(result),
+            "duration": result.get("duration") if isinstance(result, dict) else None,
+            "implementation": "TTSWorker"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/api/music/search", methods=["POST"])
+def search_music():
+    """Search for music tracks."""
+    data = request.get_json()
+    query = data.get("query")
+    mood = data.get("mood")
+    genre = data.get("genre")
+    
+    try:
+        from services.music.worker import MusicWorker
+        worker = MusicWorker()
+        
+        results = worker.search(
+            query=query,
+            mood=mood,
+            genre=genre,
+            limit=data.get("limit", 10)
+        )
+        
+        return jsonify({
+            "status": "success",
+            "tracks": results if isinstance(results, list) else [],
+            "count": len(results) if isinstance(results, list) else 0,
+            "implementation": "MusicWorker"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/api/sfx/search", methods=["POST"])
+def search_sfx():
+    """Search for sound effects."""
+    data = request.get_json()
+    query = data.get("query")
+    category = data.get("category")
+    
+    try:
+        from services.sfx_library.sfx_service import SFXService
+        service = SFXService()
+        
+        results = service.search(
+            query=query,
+            category=category,
+            limit=data.get("limit", 20)
+        )
+        
+        return jsonify({
+            "status": "success",
+            "effects": results if isinstance(results, list) else [],
+            "count": len(results) if isinstance(results, list) else 0,
+            "implementation": "SFXService"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/api/render/video", methods=["POST"])
+def render_video():
+    """Render a video from a clip plan or timeline."""
+    data = request.get_json()
+    timeline = data.get("timeline")
+    output_path = data.get("output_path")
+    format_type = data.get("format", "mp4")
+    
+    if not timeline:
+        return jsonify({"error": "timeline required"}), 400
+    
+    try:
+        from services.video_renderer.renderer import VideoRenderer
+        renderer = VideoRenderer()
+        
+        result = renderer.render(
+            timeline=timeline,
+            output_path=output_path,
+            format=format_type
+        )
+        
+        return jsonify({
+            "status": "success",
+            "output_path": result.get("path") if isinstance(result, dict) else str(result),
+            "duration": result.get("duration") if isinstance(result, dict) else None,
+            "implementation": "VideoRenderer"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
 if __name__ == "__main__":
     print(f"🚀 {SERVICE_NAME} starting on port {SERVICE_PORT}")
     app.run(host="0.0.0.0", port=SERVICE_PORT, debug=True)
